@@ -11,3 +11,43 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.main {
+  max-width: 2xl;
+  margin: auto;
+  padding: 8px 16px;
+}
+
+h1 {
+  text-transform: uppercase;
+  font-size: 6rem;
+  text-align: center;
+  font-weight: bold;
+  background: linear-gradient(to bottom right, purple 30%, skyblue 40%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+input {
+  border: 1px solid #ccc;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.flex {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.mt-6 {
+  margin-top: 24px;
+}
+
+.border-b {
+  border-bottom: 1px solid #ccc;
+}
+
+.p-2 {
+  padding: 8px;
+}
