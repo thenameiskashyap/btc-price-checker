@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+
 
 // Mock data function as fallback
 const mockExchangeData = () => {
@@ -15,42 +18,112 @@ const mockExchangeData = () => {
 
 // Function to fetch real data from various exchanges
 const fetchRealExchangeData = async () => {
-  try {
-    // Object to store our results
-    const prices = {};
+  // Object to store our results
+  const prices = {};
+  let fetchSuccess = false;
+  
+  // We'll use a more reliable approach: fetch from multiple sources
+  // and consider it a success if at least 2 exchanges return valid data
+  
+  // Helper function to fetch from a single API with timeout
+  const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
     
-    // Fetch Binance price
-    const binanceResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-    const binanceData = await binanceResponse.json();
-    prices.Binance = parseFloat(binanceData.price);
-    
-    // Fetch Coinbase price
-    const coinbaseResponse = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
-    const coinbaseData = await coinbaseResponse.json();
-    prices.Coinbase = parseFloat(coinbaseData.data.amount);
-    
-    // Fetch Kraken price
-    const krakenResponse = await fetch('https://api.kraken.com/0/public/Ticker?pair=XBTUSD');
-    const krakenData = await krakenResponse.json();
-    prices.Kraken = parseFloat(krakenData.result.XXBTZUSD.c[0]);
-    
-    // Note: For Gemini and Bitstamp, we'll use their public APIs
-    // Fetch Bitstamp price
-    const bitstampResponse = await fetch('https://www.bitstamp.net/api/v2/ticker/btcusd/');
-    const bitstampData = await bitstampResponse.json();
-    prices.Bitstamp = parseFloat(bitstampData.last);
-    
-    // Fetch Gemini price
-    const geminiResponse = await fetch('https://api.gemini.com/v1/pubticker/btcusd');
-    const geminiData = await geminiResponse.json();
-    prices.Gemini = parseFloat(geminiData.last);
-    
-    return prices;
-  } catch (error) {
-    console.error("Error fetching real exchange data:", error);
-    // Return null to indicate failure, will trigger fallback
-    return null;
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        mode: 'cors',
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      throw error;
+    }
+  };
+  
+  // Function to safely fetch from each exchange
+  const fetchExchange = async (name, fetchFunction) => {
+    try {
+      const price = await fetchFunction();
+      if (price && price > 0) {
+        prices[name] = price;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.warn(`Failed to fetch from ${name}:`, error);
+      return false;
+    }
+  };
+  
+  // Using public API endpoints that are more CORS-friendly
+  const exchanges = [
+    {
+      name: 'Binance',
+      fetch: async () => {
+        // Using a CORS-friendly public API
+        const response = await fetchWithTimeout('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+        const data = await response.json();
+        return parseFloat(data.price);
+      }
+    },
+    {
+      name: 'Coinbase',
+      fetch: async () => {
+        // Using Coinbase API through a CORS proxy if needed
+        // For demo, we're using the direct URL, but you might need a proxy
+        const response = await fetchWithTimeout('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+        const data = await response.json();
+        return parseFloat(data.data.amount);
+      }
+    },
+    {
+      name: 'CoinGecko',
+      fetch: async () => {
+        // CoinGecko has a very reliable and CORS-friendly API
+        const response = await fetchWithTimeout('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+        const data = await response.json();
+        return parseFloat(data.bitcoin.usd);
+      }
+    },
+    {
+      name: 'CryptoCompare',
+      fetch: async () => {
+        // Another reliable public API
+        const response = await fetchWithTimeout('https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD');
+        const data = await response.json();
+        return parseFloat(data.USD);
+      }
+    },
+    {
+      name: 'Bitstamp',
+      fetch: async () => {
+        const response = await fetchWithTimeout('https://www.bitstamp.net/api/v2/ticker/btcusd/');
+        const data = await response.json();
+        return parseFloat(data.last);
+      }
+    }
+  ];
+  
+  // Try to fetch from all exchanges in parallel
+  const results = await Promise.all(
+    exchanges.map(exchange => 
+      fetchExchange(exchange.name, exchange.fetch)
+    )
+  );
+  
+  // Count how many successful fetches we had
+  const successCount = results.filter(success => success).length;
+  
+  // If we have at least 2 successful fetches, consider it a success
+  if (successCount >= 2) {
+    fetchSuccess = true;
   }
+  
+  return fetchSuccess ? prices : null;
 };
 
 // Simple AmountInput component
@@ -91,6 +164,63 @@ const ResultRow = ({ label, value, highlight }) => {
   );
 };
 
+// New component for the price history graph
+const PriceHistoryGraph = ({ priceHistory }) => {
+  // Generate colors for each exchange
+  const colors = {
+    Binance: '#F0B90B',     // Binance yellow
+    Coinbase: '#0052FF',    // Coinbase blue
+    CoinGecko: '#8DC647',   // CoinGecko green
+    CryptoCompare: '#FF9900', // Orange
+    Bitstamp: '#ED0033',    // Bitstamp red
+    Kraken: '#5741D9',      // Kraken purple
+    Gemini: '#00DCFA'       // Gemini teal
+  };
+
+  return (
+    <div className="price-graph-container">
+      <h2>BTC Price History</h2>
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={priceHistory}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey="timestamp" 
+            tickFormatter={(timestamp) => {
+              const date = new Date(timestamp);
+              return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+            }}
+          />
+          <YAxis 
+            domain={['auto', 'auto']}
+            tickFormatter={(price) => `$${Math.round(price / 1000)}k`}
+          />
+          <Tooltip 
+            formatter={(value) => [`$${value.toFixed(2)}`, 'Price']}
+            labelFormatter={(timestamp) => {
+              const date = new Date(timestamp);
+              return date.toLocaleTimeString();
+            }}
+          />
+          <Legend />
+          {Object.keys(colors).map(exchange => (
+            priceHistory.some(entry => entry[exchange] !== undefined) && (
+              <Line 
+                key={exchange}
+                type="monotone" 
+                dataKey={exchange} 
+                stroke={colors[exchange]} 
+                dot={false}
+                activeDot={{ r: 8 }}
+                connectNulls={true}
+              />
+            )
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
 function App() {
   const [amount, setAmount] = useState(100);
   const [btcPrices, setBtcPrices] = useState({});
@@ -98,31 +228,51 @@ function App() {
   const [bestExchange, setBestExchange] = useState(null);
   const [lastUpdated, setLastUpdated] = useState('');
   const [usingRealData, setUsingRealData] = useState(true);
+  const [fetchAttempts, setFetchAttempts] = useState(0);
+  const [fetchSuccesses, setFetchSuccesses] = useState(0);
+  // New state for price history
+  const [priceHistory, setPriceHistory] = useState([]);
+  // Maximum number of points to keep in price history
+  const MAX_HISTORY_POINTS = 20;
 
   const fetchPrices = async () => {
     setLoading(true);
+    setFetchAttempts(prev => prev + 1);
     
     try {
       // First try to get real data
       const realPrices = await fetchRealExchangeData();
       
-      if (realPrices) {
+      if (realPrices && Object.keys(realPrices).length > 0) {
         // We got real data
         setBtcPrices(realPrices);
         setUsingRealData(true);
+        setFetchSuccesses(prev => prev + 1);
+        
+        // Find best exchange (lowest price)
+        const best = Object.keys(realPrices).reduce((a, b) => 
+          realPrices[a] < realPrices[b] ? a : b
+        );
+        setBestExchange(best);
+        
+        // Update price history
+        updatePriceHistory(realPrices);
       } else {
         // Real data failed, use mock data
+        console.warn("API fetch failed, using simulated data");
         const mockPrices = mockExchangeData();
         setBtcPrices(mockPrices);
         setUsingRealData(false);
+        
+        // Find best exchange in mock data
+        const best = Object.keys(mockPrices).reduce((a, b) => 
+          mockPrices[a] < mockPrices[b] ? a : b
+        );
+        setBestExchange(best);
+        
+        // Update price history with mock data
+        updatePriceHistory(mockPrices);
       }
-      
-      // Find best exchange (lowest price)
-      const prices = realPrices || mockExchangeData();
-      const best = Object.keys(prices).reduce((a, b) => 
-        prices[a] < prices[b] ? a : b
-      );
-      setBestExchange(best);
       
       // Update timestamp
       const now = new Date();
@@ -140,12 +290,40 @@ function App() {
       );
       setBestExchange(best);
       
+      // Update price history with mock data
+      updatePriceHistory(mockPrices);
+      
       // Update timestamp
       const now = new Date();
       setLastUpdated(now.toLocaleTimeString());
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Function to update price history
+  const updatePriceHistory = (prices) => {
+    const timestamp = Date.now();
+    
+    setPriceHistory(prevHistory => {
+      // Create a new data point with the current timestamp
+      const newDataPoint = { timestamp };
+      
+      // Add each exchange's price to the data point
+      Object.keys(prices).forEach(exchange => {
+        newDataPoint[exchange] = prices[exchange];
+      });
+      
+      // Add new data point to history
+      const updatedHistory = [...prevHistory, newDataPoint];
+      
+      // Limit history length
+      if (updatedHistory.length > MAX_HISTORY_POINTS) {
+        return updatedHistory.slice(-MAX_HISTORY_POINTS);
+      }
+      
+      return updatedHistory;
+    });
   };
   
   useEffect(() => {
@@ -171,11 +349,14 @@ function App() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
   };
   
+  
+  
   return (
     <div className="App">
       <header className="App-header">
-        <h1>BTC Price Checker</h1>
-        <p>Enter USD amount to see how much BTC you can buy</p>
+        <h1><b> Bitcoin Price Tracker</b></h1>
+        <p>Looking for the best Bitcoin price in real-time? Our website continuously tracks and compares BTC prices across top exchanges like Binance, Coinbase, CryptoCompare, and CoinGecko, ensuring you always get the most competitive deal. Whether you're a trader or an investor, our platform helps you make informed decisions by providing instant price updates and highlighting the best rates at any moment. Say goodbye to manually checking multiple platforms—stay ahead of the market with accurate, up-to-the-second data all in one place!</p>
+        <p><b>Enter USD amount to see how much BTC you can buy</b></p>
         
         <AmountInput value={amount} onChange={handleAmountChange} />
         
@@ -190,8 +371,9 @@ function App() {
         {lastUpdated && (
           <div className="last-updated">
             Last updated: {lastUpdated} 
-            {!usingRealData && <span className="data-source"> (using simulated data - API fetch failed)</span>}
-            {usingRealData && <span className="data-source"> (using real-time API data)</span>}
+            {!usingRealData && <span className="data-source"> (Using simulated data)</span>}
+            
+            
           </div>
         )}
         
@@ -223,6 +405,11 @@ function App() {
                   highlight={true}
                 />
               </>
+            )}
+
+            {/* New graph component */}
+            {priceHistory.length > 1 && (
+              <PriceHistoryGraph priceHistory={priceHistory} />
             )}
           </div>
         )}
