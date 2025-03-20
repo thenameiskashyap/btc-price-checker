@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Mock data component instead of fetching from APIs
+// Mock data function as fallback
 const mockExchangeData = () => {
   const basePrice = 60000 + Math.random() * 5000;
   return {
@@ -11,6 +11,46 @@ const mockExchangeData = () => {
     Gemini: basePrice * (1 + Math.random() * 0.015),
     Bitstamp: basePrice * (1 - Math.random() * 0.01)
   };
+};
+
+// Function to fetch real data from various exchanges
+const fetchRealExchangeData = async () => {
+  try {
+    // Object to store our results
+    const prices = {};
+    
+    // Fetch Binance price
+    const binanceResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+    const binanceData = await binanceResponse.json();
+    prices.Binance = parseFloat(binanceData.price);
+    
+    // Fetch Coinbase price
+    const coinbaseResponse = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+    const coinbaseData = await coinbaseResponse.json();
+    prices.Coinbase = parseFloat(coinbaseData.data.amount);
+    
+    // Fetch Kraken price
+    const krakenResponse = await fetch('https://api.kraken.com/0/public/Ticker?pair=XBTUSD');
+    const krakenData = await krakenResponse.json();
+    prices.Kraken = parseFloat(krakenData.result.XXBTZUSD.c[0]);
+    
+    // Note: For Gemini and Bitstamp, we'll use their public APIs
+    // Fetch Bitstamp price
+    const bitstampResponse = await fetch('https://www.bitstamp.net/api/v2/ticker/btcusd/');
+    const bitstampData = await bitstampResponse.json();
+    prices.Bitstamp = parseFloat(bitstampData.last);
+    
+    // Fetch Gemini price
+    const geminiResponse = await fetch('https://api.gemini.com/v1/pubticker/btcusd');
+    const geminiData = await geminiResponse.json();
+    prices.Gemini = parseFloat(geminiData.last);
+    
+    return prices;
+  } catch (error) {
+    console.error("Error fetching real exchange data:", error);
+    // Return null to indicate failure, will trigger fallback
+    return null;
+  }
 };
 
 // Simple AmountInput component
@@ -57,16 +97,28 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [bestExchange, setBestExchange] = useState(null);
   const [lastUpdated, setLastUpdated] = useState('');
+  const [usingRealData, setUsingRealData] = useState(true);
 
-  const fetchPrices = () => {
+  const fetchPrices = async () => {
     setLoading(true);
     
-    // Simulate network delay
-    setTimeout(() => {
-      const prices = mockExchangeData();
-      setBtcPrices(prices);
+    try {
+      // First try to get real data
+      const realPrices = await fetchRealExchangeData();
+      
+      if (realPrices) {
+        // We got real data
+        setBtcPrices(realPrices);
+        setUsingRealData(true);
+      } else {
+        // Real data failed, use mock data
+        const mockPrices = mockExchangeData();
+        setBtcPrices(mockPrices);
+        setUsingRealData(false);
+      }
       
       // Find best exchange (lowest price)
+      const prices = realPrices || mockExchangeData();
       const best = Object.keys(prices).reduce((a, b) => 
         prices[a] < prices[b] ? a : b
       );
@@ -75,9 +127,25 @@ function App() {
       // Update timestamp
       const now = new Date();
       setLastUpdated(now.toLocaleTimeString());
+    } catch (error) {
+      console.error("Error in fetchPrices:", error);
+      // Use mock data as fallback
+      const mockPrices = mockExchangeData();
+      setBtcPrices(mockPrices);
+      setUsingRealData(false);
       
+      // Still need to find best exchange
+      const best = Object.keys(mockPrices).reduce((a, b) => 
+        mockPrices[a] < mockPrices[b] ? a : b
+      );
+      setBestExchange(best);
+      
+      // Update timestamp
+      const now = new Date();
+      setLastUpdated(now.toLocaleTimeString());
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
   
   useEffect(() => {
@@ -121,7 +189,9 @@ function App() {
         
         {lastUpdated && (
           <div className="last-updated">
-            Last updated: {lastUpdated} (using simulated data)
+            Last updated: {lastUpdated} 
+            {!usingRealData && <span className="data-source"> (using simulated data - API fetch failed)</span>}
+            {usingRealData && <span className="data-source"> (using real-time API data)</span>}
           </div>
         )}
         
