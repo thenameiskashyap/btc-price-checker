@@ -1,0 +1,271 @@
+:root {
+  --bg-primary: #0a0f1c;
+  --bg-secondary: #151b29;
+  --text-primary: #ffffff;
+  --text-secondary: #a0aec0;
+  --bitcoin-orange: #f7931a;
+  --bitcoin-orange-hover: #f9a942;
+  --card-bg: rgba(23, 29, 41, 0.95);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --gradient-gold: linear-gradient(135deg, #f7931a 0%, #ffb649 100%);
+  --box-shadow-card: 0 10px 20px rgba(0, 0, 0, 0.3);
+  --chart-grid: rgba(255, 255, 255, 0.1);
+  --chart-line: #f7931a;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(to bottom, var(--bg-primary), var(--bg-secondary));
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.App {
+  text-align: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.App-header {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.navbar {
+  background: transparent;
+  box-shadow: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 1rem 0;
+}
+
+.hero {
+  text-align: center;
+  padding: 8rem 2rem 6rem;
+  position: relative;
+  background: linear-gradient(rgba(10, 15, 28, 0.9), rgba(17, 24, 39, 0.95));
+}
+
+.hero h1 {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  font-weight: 800;
+}
+
+.price-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 2.5rem;
+  margin: -4rem auto 2rem;
+  max-width: 800px;
+  position: relative;
+  box-shadow: var(--box-shadow-card);
+  border: 1px solid var(--border-color);
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.amount-input {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.amount-input:hover {
+  border-color: var(--bitcoin-orange);
+  box-shadow: 0 0 20px rgba(247, 147, 26, 0.1);
+}
+
+.amount-input label {
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.amount-input input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.refresh-button {
+  background: var(--gradient-gold);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 1.2rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: var(--box-shadow-card);
+  margin: 2rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.refresh-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(247, 147, 26, 0.4);
+}
+
+.refresh-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.exchange-link {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.exchange-link:hover {
+  transform: translateY(-2px);
+  border-color: var(--bitcoin-orange);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.results-container {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  margin-top: 2rem;
+  box-shadow: var(--box-shadow-card);
+  border: 1px solid var(--border-color);
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+.result-row.highlight {
+  background: rgba(247, 147, 26, 0.1);
+  border-left: 4px solid var(--bitcoin-orange);
+}
+
+.chart-container {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2rem auto;
+  max-width: 1000px;
+  box-shadow: var(--box-shadow-card);
+  border: 1px solid var(--border-color);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.loading-skeleton {
+  padding: 2rem;
+}
+
+.skeleton-row {
+  height: 40px;
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--card-bg) 50%, var(--border-color) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+}
+
+.last-updated {
+  color: var(--text-secondary);
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.data-source {
+  color: var(--bitcoin-orange);
+  font-style: italic;
+}
+
+.price-graph-container {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.footer {
+  background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-primary));
+  padding: 6rem 2rem 2rem;
+  margin-top: 6rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 4rem;
+}
+
+.social-links {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.social-links a {
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+social-links a:hover {
+  color: var(--bitcoin-orange);
+  transform: scale(1.2);
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

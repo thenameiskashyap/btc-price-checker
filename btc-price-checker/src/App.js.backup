@@ -1,0 +1,198 @@
+import React, { useState, useEffect } from 'react';
+import './App.css';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const App = () => {
+  const [amount, setAmount] = useState(1000);
+  const [btcPrices, setBtcPrices] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState('');
+  const [priceHistory, setPriceHistory] = useState([]);
+  const MAX_HISTORY_POINTS = 20;
+
+  const exchangeUrls = {
+    Binance: 'https://www.binance.com',
+    Coinbase: 'https://www.coinbase.com',
+    CryptoCompare: 'https://www.cryptocompare.com',
+    CoinGecko: 'https://www.coingecko.com',
+    Bitstamp: 'https://www.bitstamp.net'
+  };
+
+  const handleExchangeClick = (url) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const calculateBtcAmount = (usdAmount, price) => {
+    if (!price || price <= 0 || !usdAmount || usdAmount <= 0) return '0.00000000';
+    return (usdAmount / price).toFixed(8);
+  };
+
+  const fetchPrices = async () => {
+    setLoading(true);
+    try {
+      // Simulated fetch logic for demonstration purposes
+      const mockPrices = {
+        Binance: 60000,
+        Coinbase: 60500,
+        CryptoCompare: 61000,
+        CoinGecko: 61500,
+        Bitstamp: 62000
+      };
+      setBtcPrices(mockPrices);
+
+      const timestamp = Date.now();
+      setLastUpdated(new Date(timestamp).toLocaleTimeString());
+      setPriceHistory((prevHistory) => {
+        const newDataPoint = { timestamp, ...mockPrices };
+        const updatedHistory = [...prevHistory, newDataPoint];
+        if (updatedHistory.length > MAX_HISTORY_POINTS) {
+          return updatedHistory.slice(-MAX_HISTORY_POINTS);
+        }
+        return updatedHistory;
+      });
+    } catch (error) {
+      console.error('Error fetching prices:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="App">
+      <nav className="navbar">
+        <div className="nav-content">
+          <div className="nav-logo">
+            <img src="/images/bitcoin-logo.png" alt="Bitcoin" />
+            <span>Bitcoin Price Tracker</span>
+          </div>
+          <div className="nav-links">
+            <a href="#about">About</a>
+            <a href="#exchanges">Exchanges</a>
+            <a href="#resources">Resources</a>
+          </div>
+        </div>
+      </nav>
+
+      <section className="hero">
+        <h1>Bitcoin's Wild Ride 🎢</h1>
+        <p>Real-time price comparison across major exchanges</p>
+      </section>
+
+      <div className="price-card">
+        <div className="card-header">
+          <h2>Compare Exchange Prices</h2>
+          <div className="last-updated">
+            Last updated: {lastUpdated}
+          </div>
+        </div>
+
+        <div className="amount-input">
+          <label>Enter USD Amount</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Enter USD amount"
+          />
+        </div>
+
+        <button 
+          onClick={fetchPrices} 
+          className="refresh-button"
+          disabled={loading}
+        >
+          {loading ? 'Refreshing...' : 'Refresh Prices'}
+          <i className="fas fa-sync-alt"></i>
+        </button>
+
+        <div className="exchange-list">
+          {Object.entries(btcPrices).map(([exchange, price]) => (
+            <div 
+              key={exchange}
+              className="exchange-link"
+              onClick={() => handleExchangeClick(exchangeUrls[exchange])}
+            >
+              <img src={`/images/${exchange.toLowerCase()}.png`} alt={exchange} />
+              <div className="exchange-info">
+                <span className="exchange-name">{exchange}</span>
+                <div className="price-info">
+                  <span className="exchange-price">${price.toLocaleString()}</span>
+                  <span className="btc-amount">≈ {calculateBtcAmount(amount, price)} BTC</span>
+                </div>
+              </div>
+              <i className="fas fa-external-link-alt"></i>
+            </div>
+          ))}
+        </div>
+
+        {priceHistory.length > 0 && (
+          <div className="chart-container">
+            <h2>Bitcoin Price History</h2>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={priceHistory}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                <XAxis 
+                  dataKey="timestamp" 
+                  stroke="#fff"
+                  tickFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()}
+                />
+                <YAxis stroke="#fff" />
+                <Tooltip />
+                <Legend />
+                {Object.keys(btcPrices).map((exchange, index) => (
+                  <Line
+                    key={exchange}
+                    type="monotone"
+                    dataKey={exchange}
+                    stroke={[
+                      '#f7931a',
+                      '#0052ff',
+                      '#8dc647',
+                      '#f0b90b',
+                      '#5741d9'
+                    ][index]}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-section">
+            <h3>Bitcoin Price Tracker</h3>
+            <p>Your trusted source for real-time cryptocurrency price tracking</p>
+          </div>
+          <div className="footer-section">
+            <h4>Quick Links</h4>
+            <ul>
+              <li><a href="#about">About</a></li>
+              <li><a href="#exchanges">Exchanges</a></li>
+              <li><a href="#resources">Resources</a></li>
+            </ul>
+          </div>
+          <div className="footer-section">
+            <h4>Connect With Us</h4>
+            <div className="social-links">
+              <a href="#"><i className="fab fa-twitter"></i></a>
+              <a href="#"><i className="fab fa-github"></i></a>
+              <a href="#"><i className="fab fa-linkedin"></i></a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
