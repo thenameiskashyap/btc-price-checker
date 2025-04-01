@@ -257,8 +257,8 @@ function App() {
                   <span className="exchange-name">{exchange}</span>
                   <div className="price-info">
                     <span className="exchange-price">{formatPrice(price)}</span>
-                    <span className="btc-amount">≈ {calculateBtcAmount(amount, price)} BTC</span>
                   </div>
+                  <span className="btc-equivalent">You can buy ≈ {calculateBtcAmount(amount, price)} BTC</span>
                 </div>
                 <i className="fas fa-external-link-alt"></i>
               </div>
